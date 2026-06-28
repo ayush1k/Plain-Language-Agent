@@ -1,0 +1,28 @@
+steps:
+  # 1. Build the Docker image and tag it as gcr.io/$PROJECT_ID/plain-language-agent:latest
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'gcr.io/$PROJECT_ID/plain-language-agent:latest', '.']
+
+  # 2. Push the Docker image to Google Container Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'gcr.io/$PROJECT_ID/plain-language-agent:latest']
+
+  # 3. Deploy the container image to Cloud Run in us-central1 region
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: 'gcloud'
+    args:
+      - 'run'
+      - 'deploy'
+      - 'plain-language-agent'
+      - '--image'
+      - 'gcr.io/$PROJECT_ID/plain-language-agent:latest'
+      - '--region'
+      - 'us-central1'
+      - '--platform'
+      - 'managed'
+      - '--allow-unauthenticated'
+      - '--set-env-vars'
+      - 'HUGGINGFACEHUB_API_TOKEN=your_huggingface_token_here,GOOGLE_API_KEY=your_google_api_key_here'
+
+images:
+  - 'gcr.io/$PROJECT_ID/plain-language-agent:latest'

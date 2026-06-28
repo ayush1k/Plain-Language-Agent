@@ -1,15 +1,15 @@
-# AI Humanizer & MCP Server: Architectural Blueprint & Technical Breakdown
+# Plain Language Agent & MCP Server: Architectural Blueprint & Technical Breakdown
 
-This document provides a textbook-level architectural breakdown of the **AI Humanizer & MCP Server** codebase. It is designed to get a Principal Systems Architect or Senior Staff Engineer up to speed on the core business domain, system boundaries, code skeleton, execution mechanics, and operational complexities.
+This document provides a textbook-level architectural breakdown of the **Plain Language Agent & MCP Server** codebase. It is designed to get a Principal Systems Architect or Senior Staff Engineer up to speed on the core business domain, system boundaries, code skeleton, execution mechanics, and operational complexities.
 
 ---
 
 ## Phase 1: The Executive Blueprint
 
 ### 1. The Core Problem
-Generative AI writing (e.g., LLM outputs) often exhibits statistical and stylistic patterns (clichés, predictable sentence lengths, passive voice) that make it easily flaggable by classifiers or read as unnatural to humans. 
+Complex institutional text—such as medical discharge instructions, legal contracts, insurance policies, and government forms—often uses vocabulary and syntax that is difficult for general audiences or patients to understand.
 
-This repository solves this problem by providing a **dual-interface, hybrid text rewriting utility** that strips out typical AI idioms, shortens convoluted sentences, dynamically injects casual/creative/technical syntax depending on the target tone, and tracks Flesch-Kincaid readability metrics. It functions both as an **interactive web-based GUI** and as an **integration-ready Model Context Protocol (MCP) server** for AI assistants.
+This repository solves this problem by providing an **agentic plain language compliance tool** that rewrites complex text to meet Flesch-Kincaid readability standards. It targets Grade 6 for healthcare/children, Grade 8 for general public/government (the US Plain Writing Act standard), and Grade 10 for legal/technical professional documents. It functions both as an **interactive web-based GUI** and as an **integration-ready Model Context Protocol (MCP) server**.
 
 ### 2. High-Level Tech Stack
 
@@ -28,9 +28,9 @@ graph TD
     end
 
     subgraph LangGraph Multi-Agent Workflow
-        Profiler[agents/profiler.js - Qwen/Qwen2.5-7B-Instruct]
+        Profiler[agents/profiler.js - Gemini 2.5 Flash]
         Paraphraser[agents/paraphraser.js - meta-llama/Meta-Llama-3-8B-Instruct]
-        Critic[agents/critic.js - meta-llama/Meta-Llama-3-8B-Instruct]
+        Critic[agents/critic.js - Gemini 2.5 Flash]
     end
 
     Browser -->|HTTP POST /api/humanize| GuiServer
@@ -48,7 +48,9 @@ graph TD
 *   **Language:** Vanilla JavaScript (ES6 ESModules).
 *   **Protocol Support:** Model Context Protocol (MCP) SDK v1.x (via JSON-RPC over `stdio` transport).
 *   **Agentic Orchestration:** `@langchain/langgraph` (v1.x) managing StateGraph cycles.
-*   **Inference Pipeline:** `@huggingface/inference` invoking Hugging Face Serverless API `chatCompletion` conversational task endpoints (`Qwen/Qwen2.5-7B-Instruct` and `meta-llama/Meta-Llama-3-8B-Instruct`).
+*   **Inference Pipeline:**
+    *   **Gemini 2.5 Flash** (via `@langchain/google-genai` using `GOOGLE_API_KEY`) for Profiler and Critic nodes.
+    *   **Llama-3-8B-Instruct** (via `@huggingface/inference` using `HUGGINGFACEHUB_API_TOKEN`) for the Paraphraser node.
 *   **Validation:** Zod (`z`) for runtime request validation and MCP tool schema checking.
 
 ---
@@ -60,18 +62,18 @@ The workspace is structured entirely in ES6 vanilla JS modules:
 
 - **`/src`**: Contains primary bootstrapper code.
     - [`index.js`](file:///workspaces/agentic-humanizer/src/index.js): Main CLI execution context and MCP SDK Server setup (loads `.env` variables at boot time).
-    - [`gui.js`](file:///workspaces/agentic-humanizer/src/gui.js): Embedded HTTP server and API router (triggers the LangGraph workflow).
-    - [`humanize.js`](file:///workspaces/agentic-humanizer/src/humanize.js): Classical rules-based pipeline.
-    - [`patterns.js`](file:///workspaces/agentic-humanizer/src/patterns.js): Constant dictionaries of style regex patterns.
-    - [`readability.js`](file:///workspaces/agentic-humanizer/src/readability.js): Flesch-Kincaid calculator.
+    - [`gui.js`](file:///workspaces/agentic-humanizer/src/gui.js): Embedded HTTP server and API router (triggers the LangGraph workflow). Exposes static HTML GUI.
+    - [`humanize.js`](file:///workspaces/agentic-humanizer/src/humanize.js): Heuristic rules-based pipeline.
+    - [`patterns.js`](file:///workspaces/agentic-humanizer/src/patterns.js): Pattern dictionaries mapped to target grade levels.
+    - [`readability.js`](file:///workspaces/agentic-humanizer/src/readability.js): Flesch-Kincaid metric calculator.
     - [`logger.js`](file:///workspaces/agentic-humanizer/src/logger.js): Simple global logger.
     - [`errors.js`](file:///workspaces/agentic-humanizer/src/errors.js): App validation and processing exceptions.
 - **`/mcp-server`**: Contains local MCP components.
-    - [`index.js`](file:///workspaces/agentic-humanizer/mcp-server/index.js): Exposes the `get_humanizer_patterns` tool with strict Zod validation.
+    - [`index.js`](file:///workspaces/agentic-humanizer/mcp-server/index.js): Exposes the `get_plain_language_patterns` tool with strict Zod validation.
 - **`/agents`**: LangGraph nodes.
-    - [`profiler.js`](file:///workspaces/agentic-humanizer/agents/profiler.js): Analyzes raw text style.
-    - [`paraphraser.js`](file:///workspaces/agentic-humanizer/agents/paraphraser.js): Rewrites draft using patterns and LLM instructions.
-    - [`critic.js`](file:///workspaces/agentic-humanizer/agents/critic.js): Reviews quality and controls loop iteration.
+    - [`profiler.js`](file:///workspaces/agentic-humanizer/agents/profiler.js): Gemini-powered complexity analyzer that calculates the initial grade score and creates the directive.
+    - [`paraphraser.js`](file:///workspaces/agentic-humanizer/agents/paraphraser.js): Rewrites draft using Llama-3 and MCP-fetched pattern rules.
+    - [`critic.js`](file:///workspaces/agentic-humanizer/agents/critic.js): Performs score-gate checks and qualitative Gemini reviews.
 - **`/graph`**: LangGraph state definitions.
     - [`workflow.js`](file:///workspaces/agentic-humanizer/graph/workflow.js): StateGraph compilation.
 
@@ -104,9 +106,9 @@ sequenceDiagram
     deactivate Index
     
     Note over Gui: POST /api/humanize received
-    Gui->>Workflow: graph.invoke({ rawText })
+    Gui->>Workflow: graph.invoke({ rawText, gradeLevel })
     activate Workflow
-    Workflow-->>Gui: finalState ({ draftText })
+    Workflow-->>Gui: finalState ({ draftText, readabilityScores, gradeLevel })
     deactivate Workflow
     Gui-->>OS: Return JSON response
 ```
@@ -115,25 +117,27 @@ sequenceDiagram
 
 ## Phase 3: Data Flow & Agentic Mechanics
 
-### 1. The Multi-Agent Humanization Loop
+### 1. The Multi-Agent Plain Language Loop
 When a rewrite request hits the HTTP API router, the data undergoes loop-based processing:
 
 ```mermaid
 flowchart TD
-    Raw[Raw Text Input] --> Prof[Profiler Node: Identify Cliches]
+    Raw[Raw Text Input] --> Prof[Profiler Node: Compute baseline score & analyze]
     Prof -->|Directive| Para[Paraphraser Node: Fetch patterns & rewrite]
-    Para -->|Draft Text| Critic[Critic Node: Throttled Quality Check]
+    Para -->|Draft Text| Critic[Critic Node: Compute new score & review]
     
     Critic -->|Rejected + Feedback| Para
-    Critic -->|Approved| Final[Return Final Draft]
+    Critic -->|Score gate passed OR Approved| Final[Return Final Draft]
 ```
 
 ### 2. State & Channels
 The StateGraph state is defined with vanilla JavaScript config channels:
 - `rawText`: The input machine-written text.
 - `directive`: Instruction guideline set by the profiler and amended with feedback by the critic.
-- `draftText`: The working copy of the humanized output.
+- `draftText`: The working copy of the simplified output.
 - `status`: Transition flag (`"approved"` or `"rejected"`) evaluated by the critic.
+- `gradeLevel`: The target readability Flesch-Kincaid grade level (defaults to `"8"`).
+- `readabilityScores`: Tracks `{ before: null, after: null }` metrics.
 
 ### 3. Loop Throttling
 In `agents/critic.js`, the review cycle is throttled using a 2000ms delay:
@@ -144,9 +148,7 @@ This reduces execution speed when looping in test pipelines and prevents hitting
 
 ### 4. Dynamic MCP Patterns & Tool Binding
 To resolve word/phrase replacement rules dynamically from the MCP server:
-- The **Paraphraser** defines a LangChain tool schema using Zod that requires a `tone` parameter.
-- It instantiates a `ChatHuggingFace` wrapper to bind this tool using `.bindTools([toolSchema])`.
-- It dynamically queries the local MCP server over stdio using `get_humanizer_patterns` with the tone parameter extracted from the `directive` (casual, formal, or balanced).
+- The **Paraphraser** queries the local MCP server over stdio using `get_plain_language_patterns` with the `gradeLevel` parameter extracted from the workflow state.
 - The **MCP Server** imports `src/patterns.js`, validates arguments via Zod, and queries the patterns. Since JS RegExp objects do not serialize directly to JSON, the MCP server maps RegExp instances using their `.source` string property.
 - The Paraphraser formats these retrieved regex rules and injects them directly into the Llama-3 system prompt, guiding the model's rewriting pass.
 
@@ -159,14 +161,10 @@ Because the MCP protocol communicates over standard input (`stdin`) and standard
 > [!IMPORTANT]
 > Any auxiliary logs, trace messages, or server notifications MUST be directed exclusively to `stderr` or a logger writing to `stderr`.
 
-### 2. Hugging Face Serverless API Key Initialization
-The LangChain `HuggingFaceInference` class throws an error at module load time if `apiKey` is empty or undefined.
-- **Gotcha Fix 1 (Lazy Loading):** All Hugging Face model client instantiations are performed **lazily** inside the node functions. This avoids load-time import errors.
-- **Gotcha Fix 2 (ESM Load Order Resolve):** Since ES Modules load and evaluate top-level imports statically before the rest of the entry script runs, `process.loadEnvFile()` must execute before any model instantiation. Placing token retrievals inside the node function body ensures environment variables are populated before invocation.
+### 2. LLM Lazy Loading & ESM Load Order
+LangChain client wrappers can throw errors during module initialization if api keys are missing or invalid:
+- **Lazy Loading:** `ChatGoogleGenerativeAI` and `ChatHuggingFace` instantiations are performed **lazily** inside the node functions. This avoids load-time import errors.
+- **Environment Population:** Calling `process.loadEnvFile()` in the main entry point runs before model invocations occur, ensuring keys are populated when needed.
 
-### 3. Serverless Inference Task Compatibility
-Hugging Face Serverless Inference providers (such as Together AI) enforce task-based endpoints: instruction models (like `Llama-3-8B-Instruct` or `Qwen2.5-7B-Instruct`) are configured for conversational tasks (`conversational`) and will throw errors when queried under raw `text-generation` tasks.
-- **Gotcha Fix:** Route all LLM text completion calls through HfInference `.chatCompletion()` (specifying `messages` arrays) rather than raw text generation. This matches conversational task endpoints and satisfies serverless providers.
-
-### 4. Pure JavaScript Deployment
-Because there is no TypeScript compilation step, the `build` script in `package.json` simply ensures that `src/index.js` is executable (`chmod +x`). Docker runtime layers copy the `/src`, `/mcp-server`, `/agents`, and `/graph` files directly, accelerating container bootstrap time and lowering runtime image overhead.
+### 3. Flesch-Kincaid Score Gate
+To optimize API usage and model latency, the **Critic** checks the computed FK score of the draft against the target grade level. If it is already at or below target, the Critic immediately approves the draft and exits without invoking Gemini.

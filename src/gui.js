@@ -17,7 +17,7 @@ function renderPage() {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>HUMANIZER_STUDIO_V1.0</title>
+  <title>Plain Language Agent</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;700&display=swap" rel="stylesheet">
   <script>
@@ -71,7 +71,7 @@ function renderPage() {
       box-shadow: 0 0 10px var(--glow-color);
     }
 
-    .tone-flag.active {
+    .tone-flag.active, .grade-flag.active {
       background-color: var(--neon-green);
       color: var(--deep-black);
       box-shadow: 0 0 10px var(--neon-green);
@@ -133,17 +133,12 @@ function renderPage() {
   <div class="scanline pointer-events-none"></div>
 
   <div class="max-w-6xl mx-auto space-y-8 relative z-20">
-    <!-- ASCII Banner -->
+    <!-- Header Banner -->
     <header class="flex flex-col md:flex-row md:items-end justify-between gap-6 crt-glow">
       <div>
-        <pre class="text-[10px] md:text-xs leading-none mb-4 opacity-80 hidden md:block select-none pointer-events-none">
- █████╗ ██╗     ██╗  ██╗██╗   ██╗███╗   ███╗ █████╗ ███╗   ██╗██╗███████╗███████╗██████╗ 
-██╔══██╗██║     ██║  ██║██║   ██║████╗ ████║██╔══██╗████╗  ██║██║╚══███╔╝██╔════╝██╔══██╗
-███████║██║     ███████║██║   ██║██╔████╔██║███████║██╔██╗ ██║██║  ███╔╝ █████╗  ██████╔╝
-██╔══██║██║     ██╔══██║██║   ██║██║╚██╔╝██║██╔══██║██║╚██╗██║██║ ███╔╝  ██╔══╝  ██╔══██╗
-██║  ██║██║     ██║  ██║╚██████╔╝██║ ╚═╝ ██║██║  ██║██║ ╚████║██║███████╗███████╗██║  ██║
-╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝ ╚═════╝ ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝  ╚═══╝╚═╝╚══════╝╚══════╝╚═╝  ╚═╝
-        </pre>
+        <div class="text-2xl md:text-3xl font-bold uppercase tracking-[0.25em] mb-4 text-cyan-700 dark:text-cyan-400">
+          Plain Language Agent
+        </div>
         <div class="flex items-center space-x-2 text-xs font-bold uppercase tracking-[0.2em]">
           <span>[ SYSTEM ONLINE ]</span>
           <span class="text-slate-500 dark:text-white">v1.1.0-AGENTIC</span>
@@ -168,6 +163,16 @@ function renderPage() {
           <span id="char-count" class="text-xs opacity-60">0x0 BYTES</span>
         </div>
         
+        <!-- GRADE LEVEL SELECTOR -->
+        <div class="space-y-2 px-2">
+          <span class="text-xs font-bold uppercase tracking-widest text-cyan-700 dark:text-cyan-400 block"># TARGET_GRADE_LEVEL</span>
+          <div id="grade-selector" class="flex flex-wrap gap-2 text-[10px] md:text-xs">
+            <button data-grade="6" class="grade-flag px-3 py-1 border border-current transition-all uppercase">Grade 6 — Healthcare</button>
+            <button data-grade="8" class="grade-flag active px-3 py-1 border border-current transition-all uppercase">Grade 8 — Government</button>
+            <button data-grade="10" class="grade-flag px-3 py-1 border border-current transition-all uppercase">Grade 10 — Legal</button>
+          </div>
+        </div>
+
         <div class="terminal-border bg-black/[0.03] dark:bg-black/40 backdrop-blur-sm p-4 h-[400px] md:h-[500px] flex flex-col">
           <textarea id="input" 
             class="flex-1 bg-transparent border-none outline-none resize-none text-sm leading-relaxed placeholder:opacity-30 scrollbar-hide"
@@ -217,6 +222,18 @@ function renderPage() {
             <br>AWAITING EXECUTION...
           </div>
           <div id="output" class="hidden text-sm leading-relaxed whitespace-pre-wrap"></div>
+        </div>
+
+        <!-- READABILITY SCORE PANEL -->
+        <div class="terminal-border bg-black/[0.03] dark:bg-black/40 p-4 space-y-2 text-xs">
+          <span class="text-xs font-bold uppercase tracking-widest text-cyan-700 dark:text-cyan-400 block"># READABILITY_METRICS</span>
+          <div class="flex justify-between">
+            <span>BEFORE: <span id="score-before" class="font-bold">—</span></span>
+            <span>AFTER: <span id="score-after" class="font-bold">—</span></span>
+          </div>
+          <div id="simplification-summary" class="opacity-80 pt-1 border-t border-current border-dashed text-[10px]">
+            [ READABILITY ANALYSIS PENDING ]
+          </div>
         </div>
 
         <div class="space-y-4">
@@ -283,11 +300,23 @@ function renderPage() {
     const changesList = document.getElementById('changes-list');
     const changesPlaceholder = document.getElementById('changes-placeholder');
     const toneButtons = document.querySelectorAll('.tone-flag');
+    const gradeButtons = document.querySelectorAll('.grade-flag');
     const buttonText = document.getElementById('button-text');
     const toast = document.getElementById('toast');
     const toastText = document.getElementById('toast-text');
 
     let currentStyle = 'balanced';
+    let selectedGradeLevel = '8';
+
+    // Grade Selection
+    gradeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        gradeButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedGradeLevel = btn.dataset.grade;
+        status.textContent = \`> TARGET_GRADE_SET_TO: \${selectedGradeLevel}\`;
+      });
+    });
 
     // Tone selection
     toneButtons.forEach(btn => {
@@ -305,10 +334,14 @@ function renderPage() {
       charCount.textContent = \`0x\${length.toString(16).toUpperCase()} BYTES\`;
     });
 
-    const sampleText = 'In order to optimize the workflow, it is important to note that teams should leverage efficient processes and therefore improve consistency across the board. Additionally, the final result should feel natural and readable.';
+    const samples = {
+      '6': 'The patient should commence administration of the prescribed medication on a diurnal basis prior to the consumption of food. Alleviation of myocardial inflammation or subsequent laceration irritation should be reported to the physician immediately.',
+      '8': 'In order to facilitate the implementation of subsequent procedures, it is necessary that individuals utilize the provided forms on a monthly basis. Due to the fact that sufficient documentation is required, failure to comply prior to the deadline may terminate your benefits.',
+      '10': 'Whereas the aforementioned parties have agreed hereto, notwithstanding any prior oral representations, the lessee shall pay to the lessor an amount of $1,000 per annum pursuant to the conditions hereinafter set forth therein.'
+    };
 
     sampleButton.addEventListener('click', () => {
-      input.value = sampleText;
+      input.value = samples[selectedGradeLevel] || samples['8'];
       input.dispatchEvent(new Event('input'));
       showToast('SAMPLE_LOADED');
     });
@@ -359,12 +392,33 @@ function renderPage() {
         const response = await fetch('/api/humanize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ text, style: currentStyle })
+          body: JSON.stringify({ text, style: currentStyle, gradeLevel: selectedGradeLevel })
         });
 
         if (!response.ok) throw new Error('FAIL_CODE_01');
 
         const data = await response.json();
+
+        // Update readability scores
+        if (data.readabilityScores) {
+          const beforeVal = data.readabilityScores.before;
+          const afterVal = data.readabilityScores.after;
+          
+          document.getElementById('score-before').textContent = typeof beforeVal === 'number' ? beforeVal.toFixed(2) : '—';
+          document.getElementById('score-after').textContent = typeof afterVal === 'number' ? afterVal.toFixed(2) : '—';
+          
+          const summaryEl = document.getElementById('simplification-summary');
+          if (typeof beforeVal === 'number' && typeof afterVal === 'number') {
+            if (afterVal < beforeVal) {
+              const diff = (beforeVal - afterVal).toFixed(1);
+              summaryEl.innerHTML = \`<span class="text-green-600 dark:text-green-400 font-bold">✓ Simplified by \${diff} grade levels</span>\`;
+            } else {
+              summaryEl.innerHTML = \`<span class="text-amber-600 dark:text-amber-500 font-bold">⚠ No simplification detected</span>\`;
+            }
+          } else {
+            summaryEl.textContent = '[ READABILITY ANALYSIS COMPLETE ]';
+          }
+        }
         
         output.classList.remove('hidden');
         outputPlaceholder.classList.add('hidden');
@@ -429,7 +483,7 @@ function sendJson(response, statusCode, payload) {
   response.end(JSON.stringify(payload));
 }
 
-export async function startGuiServer(port) {
+export async function startGuiServer(portParam) {
   const server = http.createServer(async (request, response) => {
     if (!request.url) {
       response.writeHead(400);
@@ -475,6 +529,10 @@ export async function startGuiServer(port) {
 
         const text = req.body.text;
         const style = req.body.style || "balanced";
+        let gradeLevel = req.body.gradeLevel;
+        if (gradeLevel !== "6" && gradeLevel !== "8" && gradeLevel !== "10") {
+          gradeLevel = "8";
+        }
 
         if (!text || text.trim().length === 0) {
           return res.status(400).json({ error: "Text cannot be empty" });
@@ -484,21 +542,21 @@ export async function startGuiServer(port) {
           return res.status(400).json({ error: "Text is too long (maximum 10,000 characters)" });
         }
 
-        logger.info("Processing humanize request in workflow", {
+        logger.info("Processing plain language request in workflow", {
           textLength: text.length,
-          style: style
+          style: style,
+          gradeLevel: gradeLevel
         });
 
         // Invoke the compiled LangGraph workflow
-        const finalState = await graph.invoke({ rawText: text });
+        const finalState = await graph.invoke({ rawText: text, gradeLevel: gradeLevel });
 
-        // Return the final draftText from the graph's output state as the JSON response
+        // Return plain language compliance response fields
         return res.json({
           result: finalState.draftText,
-          // Support UI client keys for complete compatibility:
-          humanizedText: finalState.draftText,
-          changes: ["Agentic workflow rephrasing applied"],
-          proMode: true
+          plainText: finalState.draftText,
+          readabilityScores: finalState.readabilityScores,
+          gradeLevel: finalState.gradeLevel
         });
 
       } catch (error) {
@@ -516,6 +574,7 @@ export async function startGuiServer(port) {
     response.end("Not found");
   });
 
+  const port = process.env.PORT || 3000;
   await new Promise((resolve) => {
     server.listen(port, resolve);
   });

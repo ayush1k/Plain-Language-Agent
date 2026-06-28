@@ -1,12 +1,13 @@
 {
-  "name": "ai-humanizer-mcp-server",
+  "name": "plain-language-agent",
   "version": "1.0.7",
   "main": "index.js",
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
+  "description": "An agentic plain language compliance tool that rewrites complex institutional text to meet Flesch-Kincaid readability standards, powered by a LangGraph multi-agent workflow with Gemini and Llama-3.",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@huggingface/inference": "^4.13.20",
     "@langchain/community": "^1.1.29",
     "@langchain/core": "^1.2.1",

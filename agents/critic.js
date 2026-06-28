@@ -1,94 +1,118 @@
-/**
- * Critic Agent Node (Vanilla JS + Hugging Face Integration).
- * 
- * Uses the official @huggingface/inference client to evaluate 
- * the draft text. Throttles graph execution with a 2000ms delay.
- */
-
-import { HfInference } from "@huggingface/inference";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { SystemMessage, HumanMessage } from "@langchain/core/messages";
+import { calculateReadabilityMetrics } from "../src/readability.js";
 
 /**
- * Critic node function.
+ * Critic agent node using Gemini to evaluate plain language compliance.
+ * Includes a hard Flesch-Kincaid score gate and a 2000ms throttle delay.
  * 
- * @param {Object} state - Plain JS state object
- * @returns {Promise<Object>} State updates (status, directive)
+ * @param {Object} state - State object
+ * @returns {Promise<Object>} State updates
  */
 export async function criticNode(state) {
-  const apiKey = process.env.HUGGINGFACEHUB_API_TOKEN;
-  // CRUCIAL: Implement a 2000ms asynchronous delay to throttle loop & avoid Hugging Face rate limits
-  console.log("[Critic Agent] Throttling loop: sleeping for 2000ms...");
+  const { draftText, gradeLevel = "8", directive, readabilityScores } = state;
+
+  if (!draftText) {
+    throw new Error("Critic Node: state.draftText is required.");
+  }
+
+  // Step one: add 2000ms delay to prevent rate limit issues
+  console.error("[Critic Agent] Throttling loop: sleeping for 2000ms...");
   await new Promise((resolve) => setTimeout(resolve, 2000));
 
-  const { draftText, directive } = state;
-  console.log("[Critic Agent] Evaluating draft quality using Hugging Face Inference API...");
+  // Step two: compute the Flesch-Kincaid grade level
+  const metrics = calculateReadabilityMetrics(draftText);
+  const afterScore = metrics.fleschKincaidGrade;
 
-  const prompt = `Evaluate the following text. Determine if it sounds completely natural and human-written (not like AI-generated text).
-Look specifically for:
-1. AI clichés (e.g. "delve", "moreover", "testament to").
-2. Predictable, robotic cadence.
+  const updatedReadabilityScores = {
+    before: readabilityScores ? readabilityScores.before : null,
+    after: afterScore
+  };
 
-If it sounds natural, respond with exactly: APPROVED.
-If it still sounds robotic or has clichés, respond with exactly: REJECTED followed by constructive feedback.
+  console.error(`[Critic Agent] Computed draft Flesch-Kincaid Grade Level: ${afterScore.toFixed(2)} (Target: ${gradeLevel})`);
 
-Text:
-"${draftText}"
+  // Step three — score gate
+  if (afterScore <= Number(gradeLevel)) {
+    console.error(`[Critic Agent] Score gate passed. Readability level ${afterScore.toFixed(2)} is at or below target ${gradeLevel}. Approving.`);
+    return {
+      status: "approved",
+      directive,
+      readabilityScores: updatedReadabilityScores
+    };
+  }
 
-Evaluation (APPROVED or REJECTED [feedback]):`;
+  // Step four — Gemini review (only reached if score gate failed)
+  const systemPrompt = `You are a plain language compliance reviewer.
+Analyze the provided draft text to determine if it meets the plain language guidelines for target Flesch-Kincaid Grade Level ${gradeLevel}.
+Specifically, check if there is any remaining complex jargon, sentences over 25 words, or passive voice constructions.
+
+If the text is acceptably simple, clear, and compliant, respond with exactly: APPROVED
+If the text still contains jargon, overly long sentences, or passive voice, respond with exactly: REJECTED: followed by one specific sentence describing what needs to change.
+
+Do not output any additional commentary.`;
 
   let status = "approved";
   let updatedDirective = directive;
+  const apiKey = process.env.GOOGLE_API_KEY;
 
-  if (!apiKey) {
-    console.warn("[Critic Agent] HUGGINGFACEHUB_API_TOKEN is not set. Using local mock critic rules.");
-    // Demo loop logic: If it hasn't been refined, reject it to trigger the loop.
+  if (!apiKey || apiKey === "your_google_api_key_here") {
+    console.error("[Critic Agent] GOOGLE_API_KEY is not set or placeholder. Using local fallback mock critic rules.");
+    // Fallback loop logic: Reject once to demonstrate/test loop correction
     const hasBeenRefined = directive && directive.includes("Critic feedback");
     if (!hasBeenRefined) {
       status = "rejected";
-      updatedDirective = "Critic feedback: The text is improved, but please refine the transitions for a more natural human cadence.";
+      updatedDirective = `${directive} Critic feedback: Please simplify the vocabulary further and reduce sentence lengths.`;
     } else {
       status = "approved";
     }
   } else {
     try {
-      // Instantiate the Hugging Face Inference SDK client lazily
-      const hf = new HfInference(apiKey);
+      console.error("[Critic Agent] Evaluating plain language compliance using Gemini (gemini-2.5-flash)...");
 
-      const response = await hf.chatCompletion({
-        model: "meta-llama/Meta-Llama-3-8B-Instruct",
-        messages: [
-          { role: "system", content: "You are a writing critic. Respond with either 'APPROVED' or 'REJECTED: [feedback]'" },
-          { role: "user", content: prompt }
-        ],
-        max_tokens: 100,
-        temperature: 0.2,
+      // Lazily instantiate model in function context
+      const model = new ChatGoogleGenerativeAI({
+        apiKey: apiKey,
+        model: "gemini-2.5-flash",
+        temperature: 0.1,
       });
 
-      const resultText = response.choices[0].message.content.trim();
-      console.log(`[Critic Agent] Evaluation Result: ${resultText}`);
+      // Call Gemini with system prompt and draft text
+      const response = await model.invoke([
+        new SystemMessage(systemPrompt),
+        new HumanMessage(draftText)
+      ]);
 
-      if (resultText.toUpperCase().includes("APPROVED")) {
+      const resultText = typeof response.content === "string" ? response.content.trim() : "";
+      console.error(`[Critic Agent] Gemini Evaluation Result: ${resultText}`);
+
+      // Step five: parse response
+      if (resultText.toUpperCase().startsWith("APPROVED")) {
         status = "approved";
-      } else {
+      } else if (resultText.toUpperCase().startsWith("REJECTED")) {
         status = "rejected";
-        updatedDirective = resultText.replace(/^REJECTED:?/i, "Critic feedback:").trim();
+        const feedback = resultText.replace(/^REJECTED:?/i, "").trim();
+        updatedDirective = `${directive} Critic feedback: ${feedback}`;
+      } else {
+        status = "approved";
       }
     } catch (error) {
-      console.error("[Critic Agent] Hugging Face Inference call failed:", error.message);
-      // Fallback: approve if already gone through a loop, else reject once
+      console.error("[Critic Agent] Gemini API call failed:", error.message);
+      // Fallback in case of API failure
       const hasBeenRefined = directive && directive.includes("Critic feedback");
       if (!hasBeenRefined) {
         status = "rejected";
-        updatedDirective = "Critic feedback: The text is improved, but please refine the transitions for a more natural human cadence.";
+        updatedDirective = `${directive} Critic feedback: Please simplify the vocabulary further and reduce sentence lengths.`;
       } else {
         status = "approved";
       }
     }
   }
 
-  console.log(`[Critic Agent] Evaluation complete. Status: ${status}`);
+  console.error(`[Critic Agent] Evaluation complete. Status: ${status}`);
 
   return {
-    status: status,
-    directive: updatedDirective
+    status,
+    directive: updatedDirective,
+    readabilityScores: updatedReadabilityScores
   };
 }

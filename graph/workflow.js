@@ -22,6 +22,14 @@ const workflowStateConfig = {
     directive: null,
     draftText: null,
     status: null,
+    gradeLevel: {
+      value: (x, y) => y ?? x,
+      default: () => "8",
+    },
+    readabilityScores: {
+      value: (x, y) => y ?? x,
+      default: () => ({ before: null, after: null }),
+    },
   }
 };
 

@@ -29,11 +29,12 @@ class ChatHuggingFace {
     return this;
   }
 
-  async invoke(prompt) {
+  async invoke(prompt, systemPrompt) {
+    const defaultSys = "You are a plain language rewriting specialist. Rewrite raw text following rule lists and directives. Output ONLY the rewritten text, with no introduction or outro.";
     const response = await this.hf.chatCompletion({
       model: this.model,
       messages: [
-        { role: "system", content: "You are an expert human copywriter. Rewrite raw text following rule lists and directives. Output ONLY the rewritten text, with no introduction or outro." },
+        { role: "system", content: systemPrompt || defaultSys },
         { role: "user", content: prompt }
       ],
       max_tokens: 500,
@@ -50,10 +51,10 @@ class ChatHuggingFace {
  * @param {string} tone - Tone style parameter passed to the tool
  * @returns {Promise<Array<{find: string, replace: string, description: string}>>}
  */
-async function fetchRewritePatterns(tone = "balanced") {
+async function fetchRewritePatterns(gradeLevel = "8") {
   const mcpServerPath = path.resolve(__dirname, "../mcp-server/index.js");
   
-  console.log(`[Paraphraser Agent] Connecting to MCP Server at: ${mcpServerPath} for tone: ${tone}`);
+  console.log(`[Paraphraser Agent] Connecting to MCP Server at: ${mcpServerPath} for gradeLevel: ${gradeLevel}`);
 
   try {
     // Configure the Stdio client transport to execute the local MCP server
@@ -71,10 +72,10 @@ async function fetchRewritePatterns(tone = "balanced") {
     // Establish the connection
     await client.connect(transport);
     
-    // Invoke the get_humanizer_patterns tool
+    // Invoke the get_plain_language_patterns tool
     const result = await client.callTool({
-      name: "get_humanizer_patterns",
-      arguments: { tone },
+      name: "get_plain_language_patterns",
+      arguments: { gradeLevel },
     });
 
     // Clean up connection
@@ -90,18 +91,17 @@ async function fetchRewritePatterns(tone = "balanced") {
   } catch (error) {
     console.error(`[Paraphraser Agent] MCP Server connection failed: ${error.message}. Using simulated fallback.`);
     
-    // Fallback simulated list based on requested tone
+    // Fallback simulated list based on requested gradeLevel
     const fallback = [
       { find: "\\bin order to\\b", replace: "to" },
-      { find: "\\bdelve into\\b", replace: "explore" },
+      { find: "\\butilize\\b", replace: "use" },
+      { find: "\\bimplement\\b", replace: "do" },
       { find: "\\bmoreover\\b", replace: "also" },
-      { find: "\\btestament to\\b", replace: "proof of" },
-      { find: "\\bat the end of the day\\b", replace: "ultimately" }
+      { find: "\\bdue to the fact that\\b", replace: "because" }
     ];
-    if (tone === "casual") {
-      fallback.push({ find: "\\bfurthermore\\b", replace: "plus" });
-    } else {
-      fallback.push({ find: "\\bfurthermore\\b", replace: "in addition" });
+    if (gradeLevel === "6") {
+      fallback.push({ find: "\\bmedication\\b", replace: "medicine" });
+      fallback.push({ find: "\\bphysician\\b", replace: "doctor" });
     }
     return fallback;
   }
@@ -114,14 +114,14 @@ async function fetchRewritePatterns(tone = "balanced") {
  * @returns {Promise<Object>} State updates (draftText)
  */
 export async function paraphraserNode(state) {
-  const { rawText, directive } = state;
+  const { rawText, directive, gradeLevel = "8" } = state;
   const apiKey = process.env.HUGGINGFACEHUB_API_TOKEN;
 
-  console.log(`[Paraphraser Agent] Processing text based on directive: "${directive}"`);
+  console.log(`[Paraphraser Agent] Processing text targeting Grade ${gradeLevel}`);
 
-  // 1. Define the tool schema matching get_humanizer_patterns using zod
+  // 1. Define the tool schema matching get_plain_language_patterns using zod
   const toolSchema = z.object({
-    tone: z.enum(["casual", "formal", "balanced"]).describe("The tone style parameter to retrieve patterns for.")
+    gradeLevel: z.enum(["6", "8", "10"]).describe("Target Flesch-Kincaid grade level to retrieve plain language patterns for.")
   });
 
   // 2. Instantiate and bind toolSchema to ChatHuggingFace
@@ -134,37 +134,37 @@ export async function paraphraserNode(state) {
     chatModel.bindTools([toolSchema]);
   }
 
-  // 3. Determine the tone parameter by reading state.directive
-  let tone = "balanced";
-  if (directive) {
-    const dirLower = directive.toLowerCase();
-    if (dirLower.includes("casual")) {
-      tone = "casual";
-    } else if (dirLower.includes("formal") || dirLower.includes("cliches")) {
-      tone = "formal";
-    }
-  }
-
   // 4. Fetch the pattern rules from the MCP server
-  const patterns = await fetchRewritePatterns(tone);
+  const patterns = await fetchRewritePatterns(gradeLevel);
 
   // Format the rules for the model prompt
   const formattedRules = patterns
-    .map((p) => `- Replace regex pattern "/${p.find}/gi" with "${p.replace}"`)
+    .map((p) => `- Replace regex pattern "/${p.find || p.pattern}/gi" with "${p.replace}"`)
     .join("\n");
 
-  const prompt = `You are an expert human copywriter. Rewrite the raw text below.
-Follow these guidelines:
-1. Apply these specific word/phrase replacement rules:
+  const systemPrompt = `You are a plain language rewriting specialist.
+Your goal is to rewrite the text to meet target readability Grade ${gradeLevel}.
+
+Guidelines:
+1. Break any sentence over 20 words into two shorter sentences.
+2. Convert all passive voice to active voice.
+3. Replace every jargon term identified in the directive with its plain equivalent.
+4. Use the specific word-replacement reference rules provided in the user prompt.
+5. STRICT WARNING: Do not add, invent, or remove any factual information. Only simplify the language.
+
+### PROFILER DIRECTIVE ###
+${directive}
+##########################
+
+Output ONLY the rewritten plain language text, with no introduction or outro.`;
+
+  const prompt = `Apply these specific word/phrase replacement rules:
 ${formattedRules}
-2. Follow this styling directive: ${directive}
-3. Maintain a natural, fluid human-written rhythm.
-4. Respond ONLY with the humanized text. Do not explain changes.
 
 Raw Text:
 "${rawText}"
 
-Humanized Text:`;
+Plain Language Text:`;
 
   let draftText = "";
 
@@ -174,27 +174,37 @@ Humanized Text:`;
     // Simulate simple regex changes local replacements
     let localDraft = rawText;
     patterns.forEach((p) => {
-      const regex = new RegExp(p.find, "gi");
-      localDraft = localDraft.replace(regex, p.replace);
+      const findPattern = p.find || p.pattern?.source || p.regex?.source;
+      if (findPattern) {
+        const regex = new RegExp(findPattern, "gi");
+        localDraft = localDraft.replace(regex, p.replace);
+      }
     });
 
     draftText = localDraft;
 
     // Apply basic loop correction if critic feedback is present in directive
     if (directive && directive.includes("Critic feedback")) {
-      draftText = "explore the testament of also, we should write simple code.";
+      // Simplify medical terms/long sentences locally to trigger the critic's grade level score gate check success
+      draftText = draftText
+        .replace(/\bhypertension\b/gi, "high blood pressure")
+        .replace(/\bmedication\b/gi, "medicine")
+        .replace(/\bphysician\b/gi, "doctor");
     }
   } else {
     try {
-      const response = await chatModel.invoke(prompt);
+      const response = await chatModel.invoke(prompt, systemPrompt);
       draftText = response.trim();
     } catch (error) {
       console.error("[Paraphraser Agent] Hugging Face Inference API call failed:", error.message);
       // Fallback
       let fallbackDraft = rawText;
       patterns.forEach((p) => {
-        const regex = new RegExp(p.find, "gi");
-        fallbackDraft = fallbackDraft.replace(regex, p.replace);
+        const findPattern = p.find || p.pattern?.source || p.regex?.source;
+        if (findPattern) {
+          const regex = new RegExp(findPattern, "gi");
+          fallbackDraft = fallbackDraft.replace(regex, p.replace);
+        }
       });
       draftText = fallbackDraft;
     }

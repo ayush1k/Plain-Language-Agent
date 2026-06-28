@@ -5,7 +5,7 @@ import {
   ListToolsRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
-import { getPatternsForStyle } from "../src/patterns.js";
+import patterns from "../src/patterns.js";
 
 // Initialize the local Model Context Protocol (MCP) server
 const server = new Server(
@@ -20,11 +20,11 @@ const server = new Server(
   }
 );
 
-// Define strict Zod schema for the get_humanizer_patterns tool inputs
+// Define strict Zod schema for the get_plain_language_patterns tool inputs
 const GetPatternsInputSchema = z.object({
-  tone: z.enum(["casual", "formal", "balanced"], {
-    required_error: "tone parameter is required",
-    invalid_type_error: "tone must be one of 'casual', 'formal', or 'balanced'"
+  gradeLevel: z.enum(["6", "8", "10"], {
+    required_error: "gradeLevel parameter is required",
+    invalid_type_error: "gradeLevel must be one of '6', '8', or '10'"
   })
 }).strict();
 
@@ -33,18 +33,18 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
       {
-        name: "get_humanizer_patterns",
-        description: "Retrieve a JSON list of regex string replacements to humanize text based on a specified style tone.",
+        name: "get_plain_language_patterns",
+        description: "Retrieves plain language replacement patterns for a target readability grade level, sourced from documented plain language guidelines.",
         inputSchema: {
           type: "object",
           properties: {
-            tone: {
+            gradeLevel: {
               type: "string",
-              description: "The tone style filter ('casual', 'formal', or 'balanced')",
-              enum: ["casual", "formal", "balanced"]
+              description: "Target Flesch-Kincaid grade level. Use 6 for healthcare and children's content, 8 for general public and government content, 10 for legal and technical professional content.",
+              enum: ["6", "8", "10"]
             }
           },
-          required: ["tone"]
+          required: ["gradeLevel"]
         }
       }
     ]
@@ -55,16 +55,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   const { name, arguments: args } = request.params;
 
-  if (name === "get_humanizer_patterns") {
+  if (name === "get_plain_language_patterns") {
     try {
       // Validate the incoming JSON-RPC arguments using Zod
       const parsedArgs = GetPatternsInputSchema.parse(args);
-      const tone = parsedArgs.tone;
+      const gradeLevel = parsedArgs.gradeLevel;
 
-      console.error(`[MCP Server] Fetching patterns for tone: ${tone}`);
+      console.error(`[MCP Server] Fetching patterns for gradeLevel: ${gradeLevel}`);
       
       // Get the actual pattern objects from patterns.js
-      const rawPatterns = getPatternsForStyle(tone);
+      const rawPatterns = patterns[`grade${gradeLevel}`];
       
       // Convert RegExp objects to clean source strings so they can be JSON-serialized properly
       const results = rawPatterns.map((p) => ({
@@ -93,7 +93,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [
             {
               type: "text",
-              text: `Error: Invalid tool arguments. Details: ${validationErrorDetails}. Please call this tool again and make sure to include the required 'tone' parameter string set to 'casual', 'formal', or 'balanced'.`,
+              text: `Error: Invalid tool arguments. Details: ${validationErrorDetails}. Please call this tool again and make sure to include the required 'gradeLevel' parameter string set to '6', '8', or '10'.`,
             },
           ],
         };

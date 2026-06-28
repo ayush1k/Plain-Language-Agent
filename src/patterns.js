@@ -1,169 +1,87 @@
-export const commonReplacements = [
-  { pattern: /\bin order to\b/gi, replacement: "to", context: "formal" },
-  { pattern: /\bdue to the fact that\b/gi, replacement: "because", context: "formal" },
-  { pattern: /\bthe fact that\b/gi, replacement: "that", context: "formal" },
-  { pattern: /\bmoreover\b/gi, replacement: "also", context: "formal" },
-  { pattern: /\bfurthermore\b/gi, replacement: "also", context: "formal" },
-  { pattern: /\btherefore\b/gi, replacement: "so", context: "formal" },
-  { pattern: /\bthus\b/gi, replacement: "so", context: "formal" },
-  { pattern: /\butilize\b/gi, replacement: "use", context: "formal" },
-  { pattern: /\bleverage\b/gi, replacement: "use", context: "business" },
-  { pattern: /\bcommence\b/gi, replacement: "start", context: "formal" },
-  { pattern: /\bendeavor\b/gi, replacement: "try", context: "formal" },
-  { pattern: /\bapproximately\b/gi, replacement: "about", context: "formal" },
-  { pattern: /\bindividuals\b/gi, replacement: "people", context: "formal" },
-  { pattern: /\boptimal\b/gi, replacement: "best", context: "technical" },
-  { pattern: /\boptimize\b/gi, replacement: "improve", context: "technical" },
-  { pattern: /\bsubsequently\b/gi, replacement: "then", context: "formal" },
-  { pattern: /\binitially\b/gi, replacement: "at first", context: "formal" },
-  { pattern: /\bas a result\b/gi, replacement: "so", context: "formal" },
-  { pattern: /\bin addition\b/gi, replacement: "also", context: "formal" },
-  { pattern: /\bfor example\b/gi, replacement: "for instance", context: "formal" },
-  { pattern: /\bit is important to note that\b/gi, replacement: "note that", context: "formal" },
-  { pattern: /\bit should be noted that\b/gi, replacement: "note that", context: "formal" },
-  { pattern: /\bnotably\b/gi, replacement: "also", context: "formal" },
-  { pattern: /\bconsequently\b/gi, replacement: "so", context: "formal" },
-  { pattern: /\bultimately\b/gi, replacement: "finally", context: "formal" },
+const commonPatterns = [
+  { regex: /\butilize\b/gi, pattern: /\butilize\b/gi, replacement: "use" },
+  { regex: /\bimplement\b/gi, pattern: /\bimplement\b/gi, replacement: "do" },
+  { regex: /\bfacilitate\b/gi, pattern: /\bfacilitate\b/gi, replacement: "help" },
+  { regex: /\bcommence\b/gi, pattern: /\bcommence\b/gi, replacement: "start" },
+  { regex: /\bterminate\b/gi, pattern: /\bterminate\b/gi, replacement: "end" },
+  { regex: /\bsubsequent\b/gi, pattern: /\bsubsequent\b/gi, replacement: "next" },
+  { regex: /\bdemonstrate\b/gi, pattern: /\bdemonstrate\b/gi, replacement: "show" },
+  { regex: /\bindicate\b/gi, pattern: /\bindicate\b/gi, replacement: "show" },
+  { regex: /\bapproximately\b/gi, pattern: /\bapproximately\b/gi, replacement: "about" },
+  { regex: /\bsufficient\b/gi, pattern: /\bsufficient\b/gi, replacement: "enough" },
+  { regex: /\bregarding\b/gi, pattern: /\bregarding\b/gi, replacement: "about" },
+  { regex: /\bin order to\b/gi, pattern: /\bin order to\b/gi, replacement: "to" },
+  { regex: /\bdue to the fact that\b/gi, pattern: /\bdue to the fact that\b/gi, replacement: "because" },
+  { regex: /\bin the event that\b/gi, pattern: /\bin the event that\b/gi, replacement: "if" },
+  { regex: /\bat this point in time\b/gi, pattern: /\bat this point in time\b/gi, replacement: "now" },
+  { regex: /\bfor the purpose of\b/gi, pattern: /\bfor the purpose of\b/gi, replacement: "to" },
+  { regex: /\bwith respect to\b/gi, pattern: /\bwith respect to\b/gi, replacement: "about" },
+  { regex: /\bin accordance with\b/gi, pattern: /\bin accordance with\b/gi, replacement: "under" },
+  { regex: /\bprior to\b/gi, pattern: /\bprior to\b/gi, replacement: "before" },
+  { regex: /\bsubsequent to\b/gi, pattern: /\bsubsequent to\b/gi, replacement: "after" },
+  { regex: /\bon a monthly basis\b/gi, pattern: /\bon a monthly basis\b/gi, replacement: "monthly" },
+  { regex: /\bin the amount of\b/gi, pattern: /\bin the amount of\b/gi, replacement: "for" }
 ];
 
-export const aiClichePatterns = [
-  { pattern: /\bdelve into\b/gi, replacement: "look at", context: "formal" },
-  { pattern: /\ba tapestry of\b/gi, replacement: "a mix of", context: "creative" },
-  { pattern: /\ba comprehensive guide\b/gi, replacement: "a full guide", context: "formal" },
-  { pattern: /\bmultifaceted\b/gi, replacement: "complex", context: "formal" },
-  { pattern: /\bin the ever-evolving landscape\b/gi, replacement: "in the changing world", context: "business" },
-  { pattern: /\btestament to\b/gi, replacement: "proof of", context: "formal" },
-  { pattern: /\bunleash\b/gi, replacement: "use", context: "creative" },
-  { pattern: /\bpivotal\b/gi, replacement: "key", context: "formal" },
-  { pattern: /\bit is essential to\b/gi, replacement: "we should", context: "formal" },
-  { pattern: /\bfoster\b/gi, replacement: "build", context: "formal" },
-  { pattern: /\benhance\b/gi, replacement: "improve", context: "formal" },
-  { pattern: /\bstreamline\b/gi, replacement: "simplify", context: "business" },
-  { pattern: /\btransformative\b/gi, replacement: "major", context: "formal" },
-  { pattern: /\binnovative\b/gi, replacement: "new", context: "business" },
-  { pattern: /\brobust\b/gi, replacement: "strong", context: "technical" },
-  { pattern: /\bempower\b/gi, replacement: "help", context: "formal" },
-  { pattern: /\bjourney\b/gi, replacement: "process", context: "creative" },
-  { pattern: /\bseamless\b/gi, replacement: "easy", context: "technical" },
-  { pattern: /\bunlock\b/gi, replacement: "start using", context: "creative" },
-  { pattern: /\bshed light on\b/gi, replacement: "explain", context: "formal" },
-  { pattern: /\bbridge the gap\b/gi, replacement: "connect", context: "formal" },
-  { pattern: /\bat the forefront of\b/gi, replacement: "leading", context: "business" },
-  { pattern: /\benvision\b/gi, replacement: "imagine", context: "creative" },
-  { pattern: /\bmeticulous\b/gi, replacement: "careful", context: "formal" },
-  { pattern: /\bparadigm shift\b/gi, replacement: "big change", context: "business" },
+const grade6Specific = [
+  { regex: /\badminister\b/gi, pattern: /\badminister\b/gi, replacement: "give" },
+  { regex: /\bhypertension\b/gi, pattern: /\bhypertension\b/gi, replacement: "high blood pressure" },
+  { regex: /\bmyocardial infarction\b/gi, pattern: /\bmyocardial infarction\b/gi, replacement: "heart attack" },
+  { regex: /\blaceration\b/gi, pattern: /\blaceration\b/gi, replacement: "cut" },
+  { regex: /\bfracture\b/gi, pattern: /\bfracture\b/gi, replacement: "broken bone" },
+  { regex: /\binflammation\b/gi, pattern: /\binflammation\b/gi, replacement: "swelling" },
+  { regex: /\bmedication\b/gi, pattern: /\bmedication\b/gi, replacement: "medicine" },
+  { regex: /\bphysician\b/gi, pattern: /\bphysician\b/gi, replacement: "doctor" },
+  { regex: /\bper annum\b/gi, pattern: /\bper annum\b/gi, replacement: "per year" }
 ];
 
-export const casualContractions = [
-  { pattern: /\bdo not\b/gi, replacement: "don't", context: "casual" },
-  { pattern: /\bcannot\b/gi, replacement: "can't", context: "casual" },
-  { pattern: /\bwill not\b/gi, replacement: "won't", context: "casual" },
-  { pattern: /\bis not\b/gi, replacement: "isn't", context: "casual" },
-  { pattern: /\bare not\b/gi, replacement: "aren't", context: "casual" },
-  { pattern: /\bdoes not\b/gi, replacement: "doesn't", context: "casual" },
-  { pattern: /\bdid not\b/gi, replacement: "didn't", context: "casual" },
-  { pattern: /\bit is\b/gi, replacement: "it's", context: "casual" },
-  { pattern: /\bthat is\b/gi, replacement: "that's", context: "casual" },
-  { pattern: /\bthere is\b/gi, replacement: "there's", context: "casual" },
-  { pattern: /\bwe are\b/gi, replacement: "we're", context: "casual" },
-  { pattern: /\byou are\b/gi, replacement: "you're", context: "casual" },
-  { pattern: /\bthey are\b/gi, replacement: "they're", context: "casual" },
-  { pattern: /\bi am\b/gi, replacement: "I'm", context: "casual" },
+const grade10Specific = [
+  { regex: /\bhereinafter\b/gi, pattern: /\bhereinafter\b/gi, replacement: "from now on" },
+  { regex: /\bpursuant to\b/gi, pattern: /\bpursuant to\b/gi, replacement: "under" },
+  { regex: /\bnotwithstanding\b/gi, pattern: /\bnotwithstanding\b/gi, replacement: "even though" },
+  { regex: /\bwhereas\b/gi, pattern: /\bwhereas\b/gi, replacement: "because" },
+  { regex: /\baforementioned\b/gi, pattern: /\baforementioned\b/gi, replacement: "listed above" },
+  { regex: /\btherein\b/gi, pattern: /\btherein\b/gi, replacement: "in it" },
+  { regex: /\bheretofore\b/gi, pattern: /\bheretofore\b/gi, replacement: "until now" }
 ];
 
-export const openerReplacements = [
-  { pattern: /^Additionally,\s*/i, replacement: "Also, ", context: "formal" },
-  { pattern: /^Moreover,\s*/i, replacement: "Also, ", context: "formal" },
-  { pattern: /^However,\s*/i, replacement: "But, ", context: "formal" },
-  { pattern: /^Therefore,\s*/i, replacement: "So, ", context: "formal" },
-  { pattern: /^In addition,\s*/i, replacement: "Also, ", context: "formal" },
-  { pattern: /^For example,\s*/i, replacement: "For instance, ", context: "formal" },
-  { pattern: /^As a result,\s*/i, replacement: "So, ", context: "formal" },
+const grade6 = [
+  ...commonPatterns,
+  ...grade6Specific,
+  ...grade10Specific
 ];
 
-export const businessPatterns = [
-  { pattern: /\bsynergy\b/gi, replacement: "collaboration", context: "business" },
-  { pattern: /\bleverage\b/gi, replacement: "use", context: "business" },
-  { pattern: /\bparadigm shift\b/gi, replacement: "major change", context: "business" },
-  { pattern: /\bthink outside the box\b/gi, replacement: "think creatively", context: "business" },
-  { pattern: /\bmove the needle\b/gi, replacement: "make progress", context: "business" },
-  { pattern: /\bcircle back\b/gi, replacement: "follow up", context: "business" },
-  { pattern: /\btouch base\b/gi, replacement: "talk", context: "business" },
-  { pattern: /\band so forth\b/gi, replacement: "etc.", context: "business" },
-  { pattern: /\bat the end of the day\b/gi, replacement: "ultimately", context: "business" },
-  { pattern: /\bgoing forward\b/gi, replacement: "in the future", context: "business" },
+const grade8 = [
+  ...commonPatterns,
+  ...grade6Specific
 ];
 
-export const technicalPatterns = [
-  { pattern: /\bimplement\b/gi, replacement: "add", context: "technical" },
-  { pattern: /\butilize\b/gi, replacement: "use", context: "technical" },
-  { pattern: /\bmethodology\b/gi, replacement: "method", context: "technical" },
-  { pattern: /\bfunctionality\b/gi, replacement: "feature", context: "technical" },
-  { pattern: /\barchitect\b/gi, replacement: "design", context: "technical" },
-  { pattern: /\boptimize\b/gi, replacement: "improve", context: "technical" },
-  { pattern: /\bexecute\b/gi, replacement: "run", context: "technical" },
-  { pattern: /\binitiate\b/gi, replacement: "start", context: "technical" },
-  { pattern: /\bterminate\b/gi, replacement: "end", context: "technical" },
-  { pattern: /\bfacilitate\b/gi, replacement: "help", context: "technical" },
+const grade10 = [
+  ...commonPatterns,
+  ...grade10Specific
 ];
 
-export const academicPatterns = [
-  { pattern: /\belucidate\b/gi, replacement: "explain", context: "formal" },
-  { pattern: /\bdemonstrate\b/gi, replacement: "show", context: "formal" },
-  { pattern: /\bexhibit\b/gi, replacement: "show", context: "formal" },
-  { pattern: /\bmanifest\b/gi, replacement: "show", context: "formal" },
-  { pattern: /\bconstitute\b/gi, replacement: "form", context: "formal" },
-  { pattern: /\bcomprise\b/gi, replacement: "include", context: "formal" },
-  { pattern: /\bpertaining to\b/gi, replacement: "about", context: "formal" },
-  { pattern: /\bwith regard to\b/gi, replacement: "about", context: "formal" },
-  { pattern: /\bconcerning\b/gi, replacement: "about", context: "formal" },
-  { pattern: /\bnotwithstanding\b/gi, replacement: "despite", context: "formal" },
-];
+const patterns = {
+  grade6,
+  grade8,
+  grade10
+};
 
-export const creativePatterns = [
-  { pattern: /\bvery\b/gi, replacement: "", context: "creative" },
-  { pattern: /\breally\b/gi, replacement: "", context: "creative" },
-  { pattern: /\bquite\b/gi, replacement: "", context: "creative" },
-  { pattern: /\bsomewhat\b/gi, replacement: "", context: "creative" },
-  { pattern: /\bextremely\b/gi, replacement: "", context: "creative" },
-  { pattern: /\babsolutely\b/gi, replacement: "", context: "creative" },
-  { pattern: /\bcompletely\b/gi, replacement: "", context: "creative" },
-  { pattern: /\butterly\b/gi, replacement: "", context: "creative" },
-  { pattern: /\btruly\b/gi, replacement: "", context: "creative" },
-  { pattern: /\bhighly\b/gi, replacement: "", context: "creative" },
-];
+export default patterns;
+
+export function getPatternsForStyle(style) {
+  if (style === "casual" || style === "creative" || style === "grade6") {
+    return patterns.grade6;
+  }
+  if (style === "formal" || style === "professional" || style === "technical" || style === "business" || style === "grade10") {
+    return patterns.grade10;
+  }
+  return patterns.grade8;
+}
 
 export const fillerPatterns = [
   /\bvery very\b/gi,
   /\breally really\b/gi,
   /\bquite quite\b/gi,
-  /\bso so\b/gi,
+  /\bso so\b/gi
 ];
-
-export function getPatternsForStyle(style) {
-  const patterns = [
-    ...commonReplacements, 
-    ...openerReplacements,
-    ...aiClichePatterns
-  ];
-
-  if (style === "casual") {
-    patterns.push(...casualContractions);
-  }
-
-  if (style === "business" || style === "professional") {
-    patterns.push(...businessPatterns);
-  }
-
-  if (style === "technical") {
-    patterns.push(...technicalPatterns);
-  }
-
-  if (style === "creative") {
-    patterns.push(...creativePatterns);
-  }
-
-  patterns.push(...academicPatterns);
-
-  return patterns;
-}
