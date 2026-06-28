@@ -8,7 +8,6 @@ import { graph } from "../graph/workflow.js";
 const GuiRequestSchema = z.object({
   text: z.string().min(1),
   style: z.enum(["balanced", "casual", "formal", "professional", "technical", "creative"]).optional(),
-  proMode: z.boolean().optional(),
 });
 
 function renderPage() {
@@ -77,11 +76,7 @@ function renderPage() {
       box-shadow: 0 0 10px var(--neon-green);
     }
 
-    .pro-toggle.active {
-      border-color: #f59e0b;
-      color: #f59e0b;
-      box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
-    }
+
 
     textarea {
       caret-color: var(--neon-green);
@@ -146,9 +141,6 @@ function renderPage() {
       </div>
       
       <div class="flex items-center space-x-4">
-        <button id="pro-toggle" class="pro-toggle terminal-border px-4 py-2 text-[10px] uppercase font-bold tracking-widest transition-all">
-          <span id="pro-toggle-text">[ PRO_MODE: OFF ]</span>
-        </button>
         <button id="theme-toggle" class="terminal-border px-4 py-2 text-[10px] uppercase font-bold tracking-widest hover:bg-white/5 transition-all">
           <span id="theme-toggle-text">[ THEME_SWITCH ]</span>
         </button>
@@ -256,19 +248,7 @@ function renderPage() {
   <script>
     const themeToggleBtn = document.getElementById('theme-toggle');
     const themeToggleText = document.getElementById('theme-toggle-text');
-    const proToggleBtn = document.getElementById('pro-toggle');
-    const proToggleText = document.getElementById('pro-toggle-text');
     const status = document.getElementById('status');
-
-    let proMode = false;
-
-    proToggleBtn.addEventListener('click', () => {
-      proMode = !proMode;
-      proToggleBtn.classList.toggle('active');
-      proToggleText.textContent = proMode ? '[ PRO_MODE: ON ]' : '[ PRO_MODE: OFF ]';
-      status.textContent = proMode ? '> ENGINE_SWITCH: SEMANTIC_AI_ACTIVE' : '> ENGINE_SWITCH: LOCAL_RULES_ACTIVE';
-      showToast(proMode ? 'PRO_MODE_ENABLED' : 'PRO_MODE_DISABLED');
-    });
 
     function updateThemeToggleText() {
       if (document.documentElement.classList.contains('dark')) {
