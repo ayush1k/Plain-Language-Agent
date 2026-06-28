@@ -1,28 +1,26 @@
 /**
  * Paraphraser Agent Node (Vanilla JS + Hugging Face Integration).
  * 
- * Uses LangChain's HuggingFaceInference model wrapped in ChatHuggingFace
+ * Uses @huggingface/inference client's chatCompletion task wrapped in ChatHuggingFace
  * to rewrite text guided by the directive and matching MCP patterns.
  */
 
-import { HuggingFaceInference } from "@langchain/community/llms/hf";
+import { HfInference } from "@huggingface/inference";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StdioClientTransport } from "@modelcontextprotocol/sdk/client/stdio.js";
 import { z } from "zod";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Retrieve the token from environment variables
-const apiKey = process.env.HUGGINGFACEHUB_API_TOKEN;
-
 // Helper to get absolute path of the workspace / files
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// ChatHuggingFace wrapper class to enable .bindTools([toolSchema]) as required by LangChain
+// ChatHuggingFace wrapper class to enable .bindTools([toolSchema]) and execute chatCompletion conversational task
 class ChatHuggingFace {
-  constructor({ llm }) {
-    this.llm = llm;
+  constructor({ apiKey, model }) {
+    this.hf = new HfInference(apiKey);
+    this.model = model;
     this.boundTools = [];
   }
 
@@ -32,7 +30,16 @@ class ChatHuggingFace {
   }
 
   async invoke(prompt) {
-    return this.llm.invoke(prompt);
+    const response = await this.hf.chatCompletion({
+      model: this.model,
+      messages: [
+        { role: "system", content: "You are an expert human copywriter. Rewrite raw text following rule lists and directives. Output ONLY the rewritten text, with no introduction or outro." },
+        { role: "user", content: prompt }
+      ],
+      max_tokens: 500,
+      temperature: 0.7,
+    });
+    return response.choices[0].message.content.trim();
   }
 }
 
@@ -108,6 +115,7 @@ async function fetchRewritePatterns(tone = "balanced") {
  */
 export async function paraphraserNode(state) {
   const { rawText, directive } = state;
+  const apiKey = process.env.HUGGINGFACEHUB_API_TOKEN;
 
   console.log(`[Paraphraser Agent] Processing text based on directive: "${directive}"`);
 
@@ -119,13 +127,10 @@ export async function paraphraserNode(state) {
   // 2. Instantiate and bind toolSchema to ChatHuggingFace
   let chatModel;
   if (apiKey) {
-    const hfModel = new HuggingFaceInference({
-      model: "meta-llama/Meta-Llama-3-8B-Instruct",
+    chatModel = new ChatHuggingFace({
       apiKey: apiKey,
-      temperature: 0.7,
+      model: "meta-llama/Meta-Llama-3-8B-Instruct",
     });
-    
-    chatModel = new ChatHuggingFace({ llm: hfModel });
     chatModel.bindTools([toolSchema]);
   }
 
@@ -177,7 +182,6 @@ Humanized Text:`;
 
     // Apply basic loop correction if critic feedback is present in directive
     if (directive && directive.includes("Critic feedback")) {
-      draftText = draftText.replace(/delve/gi, "explore");
       draftText = "explore the testament of also, we should write simple code.";
     }
   } else {

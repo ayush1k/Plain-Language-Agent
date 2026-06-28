@@ -48,7 +48,7 @@ graph TD
 *   **Language:** Vanilla JavaScript (ES6 ESModules).
 *   **Protocol Support:** Model Context Protocol (MCP) SDK v1.x (via JSON-RPC over `stdio` transport).
 *   **Agentic Orchestration:** `@langchain/langgraph` (v1.x) managing StateGraph cycles.
-*   **Inference Pipeline:** `@langchain/community/llms/hf` and `@huggingface/inference` invoking Hugging Face Serverless API endpoints (`Qwen/Qwen2.5-7B-Instruct` and `meta-llama/Meta-Llama-3-8B-Instruct`).
+*   **Inference Pipeline:** `@huggingface/inference` invoking Hugging Face Serverless API `chatCompletion` conversational task endpoints (`Qwen/Qwen2.5-7B-Instruct` and `meta-llama/Meta-Llama-3-8B-Instruct`).
 *   **Validation:** Zod (`z`) for runtime request validation and MCP tool schema checking.
 
 ---
@@ -59,7 +59,7 @@ graph TD
 The workspace is structured entirely in ES6 vanilla JS modules:
 
 - **`/src`**: Contains primary bootstrapper code.
-    - [`index.js`](file:///workspaces/agentic-humanizer/src/index.js): Main CLI execution context and MCP SDK Server setup.
+    - [`index.js`](file:///workspaces/agentic-humanizer/src/index.js): Main CLI execution context and MCP SDK Server setup (loads `.env` variables at boot time).
     - [`gui.js`](file:///workspaces/agentic-humanizer/src/gui.js): Embedded HTTP server and API router (triggers the LangGraph workflow).
     - [`humanize.js`](file:///workspaces/agentic-humanizer/src/humanize.js): Classical rules-based pipeline.
     - [`patterns.js`](file:///workspaces/agentic-humanizer/src/patterns.js): Constant dictionaries of style regex patterns.
@@ -86,8 +86,9 @@ sequenceDiagram
     participant Workflow as graph/workflow.js
     participant MCP as MCP SDK Transport
     
-    OS->{Index: Invoke "node src/index.js [--gui]"
+    OS->>Index: Invoke "node src/index.js [--gui]"
     activate Index
+    Note over Index: Calls process.loadEnvFile() to pop variables
     
     alt Arg Includes "--gui"
         Index->>Gui: startGuiServer(port)
@@ -160,7 +161,12 @@ Because the MCP protocol communicates over standard input (`stdin`) and standard
 
 ### 2. Hugging Face Serverless API Key Initialization
 The LangChain `HuggingFaceInference` class throws an error at module load time if `apiKey` is empty or undefined.
-- **Gotcha Fix:** All Hugging Face model client instantiations are performed **lazily** inside the node functions. If the environment token (`process.env.HUGGINGFACEHUB_API_TOKEN`) is missing, they write descriptive warning logs to `stderr` and fallback to rule-based operations.
+- **Gotcha Fix 1 (Lazy Loading):** All Hugging Face model client instantiations are performed **lazily** inside the node functions. This avoids load-time import errors.
+- **Gotcha Fix 2 (ESM Load Order Resolve):** Since ES Modules load and evaluate top-level imports statically before the rest of the entry script runs, `process.loadEnvFile()` must execute before any model instantiation. Placing token retrievals inside the node function body ensures environment variables are populated before invocation.
 
-### 3. Pure JavaScript Deployment
+### 3. Serverless Inference Task Compatibility
+Hugging Face Serverless Inference providers (such as Together AI) enforce task-based endpoints: instruction models (like `Llama-3-8B-Instruct` or `Qwen2.5-7B-Instruct`) are configured for conversational tasks (`conversational`) and will throw errors when queried under raw `text-generation` tasks.
+- **Gotcha Fix:** Route all LLM text completion calls through HfInference `.chatCompletion()` (specifying `messages` arrays) rather than raw text generation. This matches conversational task endpoints and satisfies serverless providers.
+
+### 4. Pure JavaScript Deployment
 Because there is no TypeScript compilation step, the `build` script in `package.json` simply ensures that `src/index.js` is executable (`chmod +x`). Docker runtime layers copy the `/src`, `/mcp-server`, `/agents`, and `/graph` files directly, accelerating container bootstrap time and lowering runtime image overhead.

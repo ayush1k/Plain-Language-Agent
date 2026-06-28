@@ -1,4 +1,9 @@
 #!/usr/bin/env node
+try {
+  process.loadEnvFile();
+} catch (e) {
+  // .env file is optional
+}
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {

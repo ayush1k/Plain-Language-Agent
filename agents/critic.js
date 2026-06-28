@@ -7,9 +7,6 @@
 
 import { HfInference } from "@huggingface/inference";
 
-// Retrieve the token from environment variables
-const apiKey = process.env.HUGGINGFACEHUB_API_TOKEN;
-
 /**
  * Critic node function.
  * 
@@ -17,6 +14,7 @@ const apiKey = process.env.HUGGINGFACEHUB_API_TOKEN;
  * @returns {Promise<Object>} State updates (status, directive)
  */
 export async function criticNode(state) {
+  const apiKey = process.env.HUGGINGFACEHUB_API_TOKEN;
   // CRUCIAL: Implement a 2000ms asynchronous delay to throttle loop & avoid Hugging Face rate limits
   console.log("[Critic Agent] Throttling loop: sleeping for 2000ms...");
   await new Promise((resolve) => setTimeout(resolve, 2000));
