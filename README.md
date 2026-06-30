@@ -3,6 +3,8 @@
 This tool takes complex institutional text — medical discharge instructions, legal contracts, insurance policies, government forms — and rewrites it to plain language standards. It targets Grade 6 for healthcare and children's content, Grade 8 for general government and public-facing content (the US Plain Writing Act standard), and Grade 10 for legal and technical professional content. The multi-agent workflow (Profiler, Paraphraser, Critic) iteratively rewrites and validates until the target Flesch-Kincaid grade level is reached.
 
 🚀 **Live Deployment:** [https://plain-language-agent.onrender.com/](https://plain-language-agent.onrender.com/)
+🎥 **Video Demonstration:** [YouTube Demo](https://youtu.be/17fMWKVvcSg)
+🏆 **Kaggle Capstone Write-up:** [Kaggle Competition Write-up](https://kaggle.com/competitions/vibecoding-agents-capstone-project/writeups/plain-language-agent) (Created for the Kaggle 5 Days AI Agents Capstone Project)
 
 For a detailed technical analysis of the execution lifecycle, loops, and design patterns, please refer to the [Architectural Blueprint & Technical Breakdown](./architectural_breakdown.md).
 

@@ -20,7 +20,7 @@ graph TD
         MCPClient[MCP Client e.g. Claude Desktop / Antigravity]
     end
 
-    subgraph Host Application (Node.js/ES6 Engine)
+    subgraph "Host Application (Node.js/ES6 Engine)"
         Index[src/index.js - Main Entry Point]
         GuiServer[src/gui.js - HTTP Server]
         MCPServer[mcp-server/index.js - MCP SDK Server]
